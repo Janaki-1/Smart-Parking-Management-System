@@ -1,0 +1,741 @@
+<!-- ...existing code... -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SmartPark - Find Parking Made Easy</title>
+
+<!-- Leaflet (map) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-sA+e2mM/3b5kNfAqg3jXbN3n8xV0g1b0v3jM2v9kL6M=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-o9N1jGkXK6c3a0rY+0b7qJwWfuU2qz2b7u2s7kQmQTI=" crossorigin=""></script>
+
+<style>
+/* Base Styles */
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Poppins",sans-serif;}
+body{background-color:#f5f7fa;color:#333;}
+.navbar{background-color:#0d3b66;display:flex;justify-content:space-between;align-items:center;padding:15px 50px;color:white;flex-wrap:wrap;}
+.logo{font-size:22px;font-weight:bold;}
+.nav-links{list-style:none;display:flex;gap:25px;flex-wrap:wrap;}
+.nav-links a{color:white;text-decoration:none;font-weight:500;transition:0.3s;cursor:pointer;}
+.nav-links a:hover{color:#00aaff;}
+.hero{background-color:#1d4e89;color:white;text-align:center;padding:80px 20px;}
+.hero h1{font-size:36px;margin-bottom:10px;}
+.hero p{font-size:18px;max-width:600px;margin:0 auto 30px;}
+.search-box{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;position:relative;}
+.search-box input{padding:10px;width:300px;border-radius:5px;border:none;outline:none;}
+.search-box button{background-color:#00aaff;border:none;color:white;padding:10px 18px;border-radius:5px;cursor:pointer;transition:0.3s;}
+.search-box button:hover{background-color:#0088cc;}
+.suggestions{position:absolute;top:42px;left:0;width:300px;background:white;border:1px solid #ccc;border-radius:5px;max-height:150px;overflow-y:auto;z-index:10;}
+.suggestions div{padding:10px;cursor:pointer;}
+.suggestions div:hover{background:#f0f0f0;}
+/* search notice */
+.search-notice{margin-top:14px;color:#fff;background:#ff7f50;padding:10px;border-radius:8px;display:none;max-width:500px;margin-left:auto;margin-right:auto;}
+.search-notice a{color:#fff;text-decoration:underline;cursor:pointer;}
+.how-it-works{padding:60px 20px;text-align:center;}
+.how-it-works h2{font-size:28px;margin-bottom:40px;color:#0d3b66;}
+.steps{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;}
+.step{background-color:white;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);padding:25px;width:280px;text-align:center;transition:transform 0.3s;}
+.step:hover{transform:translateY(-5px);}
+
+/* Footer */
+footer{background-color:#0d3b66;color:white;padding:40px 20px;}
+.footer-content{display:flex;justify-content:space-around;flex-wrap:wrap;gap:30px;}
+.footer-section h4{margin-bottom:10px;font-size:18px;border-bottom:2px solid #00aaff;display:inline-block;padding-bottom:5px;}
+.footer-section ul{list-style:none;}
+.footer-section ul li a{color:white;text-decoration:none;transition:0.3s;}
+.footer-section ul li a:hover{color:#00aaff;}
+.footer-bottom{text-align:center;margin-top:20px;font-size:14px;opacity:0.8;}
+
+/* Login/Signup Page Styles */
+.auth-page{display:none;padding:60px 20px;text-align:center;}
+.auth-page h2{margin-bottom:25px;color:#0d3b66;}
+.auth-page input{width:300px;padding:12px;margin:10px 0;border-radius:8px;border:1px solid #ccc;}
+.auth-page button{width:320px;padding:12px;background:#2575fc;border:none;border-radius:8px;color:white;font-size:16px;margin-top:15px;transition:0.3s;}
+.auth-page button:hover{background:#1a5edb;}
+.auth-page p{margin-top:15px;font-size:14px;}
+.auth-page a{color:#2575fc;cursor:pointer;}
+.auth-page a:hover{text-decoration:underline;}
+
+/* Parking Cards */
+#parkingSection{display:none;padding:50px 20px;}
+.container{max-width:1200px;margin:0 auto;}
+.parking-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:25px;}
+.parking-card{background:white;border-radius:15px;box-shadow:0 8px 20px rgba(0,0,0,0.1);padding:20px;transition:transform 0.3s, box-shadow 0.3s;}
+.parking-card:hover{transform:translateY(-5px);box-shadow:0 12px 25px rgba(0,0,0,0.15);}
+.parking-card h3{margin-bottom:10px;color:#0d3b66;}
+.parking-card p{margin-bottom:8px;font-size:14px;}
+.parking-card .price{font-weight:bold;color:#2575fc;}
+.badge{display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:bold;color:white;margin-bottom:8px;}
+.badge.free{background:#28a745;}
+.badge.paid{background:#007bff;}
+.badge.low{background:#ffc107; color: #333;}
+.parking-card button{padding:10px 20px;border:none;border-radius:8px;background:#00aaff;color:white;transition:0.3s;}
+.parking-card button:hover{background:#0088cc;}
+.parking-card button:disabled{background:#ccc;cursor:not-allowed;}
+
+/* Dashboard */
+.dashboard{display:none;padding:50px 20px;}
+.dashboard h2{color:#0d3b66;margin-bottom:20px;}
+.booking-history{background:white;border-radius:10px;padding:20px;box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+.booking-item{border-bottom:1px solid #eee;padding:15px 0;}
+.booking-item:last-child{border-bottom:none;}
+
+/* Filter Section */
+.filter-section{background:white;padding:20px;border-radius:10px;margin-bottom:30px;box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+.filter-options{display:flex;gap:15px;flex-wrap:wrap;}
+.filter-options select, .filter-options input{padding:8px 12px;border-radius:5px;border:1px solid #ccc;}
+
+/* Map Section */
+.map-section{display:block;padding:20px;}
+.map-container{height:500px;background:#e9ecef;border-radius:10px;display:block;margin:20px 0;color:#6c757d;}
+
+/* Payment Modal */
+.payment-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:9999;}
+.payment-modal .modal{background:#fff;padding:20px;border-radius:10px;max-width:420px;width:95%;}
+.payment-modal h3{margin-bottom:10px;color:#0d3b66;}
+.payment-methods{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.method{padding:8px 12px;border-radius:8px;border:1px solid #ccc;cursor:pointer;}
+.method.active{border-color:#2575fc;background:#eef6ff;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:15px;}
+.modal-actions button{padding:8px 14px;border-radius:8px;border:none;background:#2575fc;color:#fff;cursor:pointer;}
+.modal-actions .cancel{background:#ccc;color:#333;}
+.spinner{display:none;border:4px solid rgba(0,0,0,0.1);border-radius:50%;border-top:4px solid #00aaff;width:28px;height:28px;animation:spin 1s linear infinite;margin-left:8px;vertical-align:middle;}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+/* Responsive improvements */
+@media (max-width:768px){
+    .navbar{padding:15px 20px;}
+    .nav-links{gap:15px;}
+    .hero{padding:50px 20px;}
+    .hero h1{font-size:28px;}
+    .search-box input{width:100%;}
+    .suggestions{width:100%;}
+    .filter-options{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<header>
+  <nav class="navbar">
+    <div class="logo">SmartPark</div>
+    <ul class="nav-links">
+      <li><a onclick="showHome()">Home</a></li>
+      <li><a onclick="showParking()">Parking</a></li>
+      <li><a onclick="showMap()">Map</a></li>
+      <li><a onclick="showDashboard()">Dashboard</a></li>
+      <li><a id="authLink" onclick="showLogin()">Login</a></li>
+      <li><a id="logoutLink" style="display:none" onclick="logoutUser()">Logout</a></li>
+    </ul>
+  </nav>
+</header>
+
+<!-- Hero Section -->
+<section class="hero" id="homeSection">
+  <h1>Find Parking Made Easy</h1>
+  <p>Locate, reserve and pay for parking spots in real-time. Save time and reduce stress with our smart parking solution.</p>
+  <div class="search-box">
+    <input id="searchInput" type="text" placeholder="Search city or place (e.g., Kochi)">
+    <div id="suggestions" class="suggestions" style="display:none"></div>
+    <button onclick="searchParking()">Search</button>
+  </div>
+
+  <!-- Notice shown when unauthenticated user tries to search -->
+  <div id="searchNotice" class="search-notice" style="display:none;">
+    You must <a onclick="showLogin()">login</a> to search for parking slots.
+  </div>
+</section>
+
+<!-- Login Page -->
+<section class="auth-page" id="loginPage">
+  <h2>Login</h2>
+  <input type="email" id="loginEmail" placeholder="Email">
+  <div id="loginEmailError" class="error-message"></div>
+  <input type="password" id="loginPassword" placeholder="Password">
+  <div id="loginPasswordError" class="error-message"></div>
+  <div>
+    <label style="font-size:14px;"><input type="checkbox" id="rememberMe"> Remember me</label>
+  </div>
+  <button onclick="loginUser()">Login</button>
+  <p>Don't have an account? <a onclick="showSignup()">Sign Up</a></p>
+</section>
+
+<!-- Signup Page -->
+<section class="auth-page" id="signupPage">
+  <h2>Sign Up</h2>
+  <input type="email" id="signupEmail" placeholder="Email">
+  <div id="signupEmailError" class="error-message"></div>
+  <input type="password" id="signupPassword" placeholder="Password">
+  <div id="signupPasswordError" class="error-message"></div>
+  <input type="password" id="confirmPassword" placeholder="Confirm Password">
+  <div id="confirmPasswordError" class="error-message"></div>
+  <button onclick="signupUser()">Sign Up</button>
+  <p>Already have an account? <a onclick="showLogin()">Login</a></p>
+</section>
+
+<!-- Parking Section -->
+<div id="parkingSection" class="parking-section" style="display:none;">
+  <div class="container">
+    <div class="filter-section">
+      <div class="filter-options">
+        <input id="filterLocation" placeholder="Filter by location">
+        <select id="filterType">
+          <option value="">All types</option>
+          <option value="free">Free</option>
+          <option value="paid">Paid</option>
+        </select>
+        <button onclick="applyFilters()">Apply</button>
+      </div>
+    </div>
+    <div id="parkingList" class="parking-list"></div>
+  </div>
+</div>
+
+<!-- Map Section -->
+<section class="map-section" id="mapSection" style="display:none;">
+  <div class="container">
+    <h2>Map - Parking Locations (Kerala)</h2>
+    <div id="map" class="map-container"></div>
+  </div>
+</section>
+
+<!-- Dashboard Section -->
+<section class="dashboard" id="dashboardSection">
+  <div class="container" id="dashboardContainer">
+    <h2>Your Bookings</h2>
+    <div id="bookingHistory" class="booking-history"></div>
+  </div>
+</section>
+
+<!-- Payment Modal -->
+<div id="paymentModal" class="payment-modal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Complete Payment</h3>
+    <div id="paymentDetails"></div>
+    <div class="payment-methods" id="methods">
+      <div class="method active" data-method="upi">UPI (Enter VPA)</div>
+      <div class="method" data-method="gpay">Google Pay</div>
+      <div class="method" data-method="phonepe">PhonePe</div>
+      <div class="method" data-method="card">Card</div>
+    </div>
+    <div id="upiInput" style="margin-top:8px;">
+      <input id="upiVpa" placeholder="example@okaxis" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;">
+      <div id="upiError" class="error-message"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="cancel" onclick="closePaymentModal()">Cancel</button>
+      <button id="payNowBtn" onclick="processPayment()">Pay</button>
+      <div id="paySpinner" class="spinner"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-content">
+    <div class="footer-section">
+      <h4>About</h4>
+      <p style="max-width:200px;">SmartPark helps you find and reserve parking quickly.</p>
+    </div>
+    <div class="footer-section">
+      <h4>Links</h4>
+      <ul>
+        <li><a onclick="showHome()">Home</a></li>
+        <li><a onclick="showParking()">Parking</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="footer-bottom">© 2025 SmartPark. All rights reserved.</p>
+</footer>
+
+<script>
+// Section Toggle
+const homeSection = document.getElementById("homeSection");
+const loginPage = document.getElementById("loginPage");
+const signupPage = document.getElementById("signupPage");
+const parkingSection = document.getElementById("parkingSection");
+const dashboardSection = document.getElementById("dashboardSection");
+const mapSection = document.getElementById("mapSection");
+const authLink = document.getElementById("authLink");
+const logoutLink = document.getElementById("logoutLink");
+const searchNoticeEl = document.getElementById("searchNotice");
+
+// Map variables
+let map;
+let parkingMarkers = [];
+
+// Simple users storage helper
+function getUsers() {
+  return JSON.parse(localStorage.getItem("users") || "{}");
+}
+function setUsers(u) {
+  localStorage.setItem("users", JSON.stringify(u));
+}
+
+function hideAll() {
+  homeSection.style.display = "none";
+  loginPage.style.display = "none";
+  signupPage.style.display = "none";
+  parkingSection.style.display = "none";
+  dashboardSection.style.display = "none";
+  mapSection.style.display = "none";
+}
+
+function showHome() { hideAll(); homeSection.style.display = "block"; }
+function showLogin() { hideAll(); loginPage.style.display = "block"; }
+function showSignup() { hideAll(); signupPage.style.display = "block"; }
+function showParking() {
+  hideAll();
+  parkingSection.style.display = "block";
+  renderParking(); // Show all parking initially
+}
+function showDashboard() {
+  hideAll();
+  dashboardSection.style.display = "block";
+  loadBookingHistory();
+}
+function showMap() { hideAll(); mapSection.style.display = "block"; setTimeout(()=>{ map.invalidateSize(); },300); }
+
+// Check if user is logged in on page load
+window.onload = function() {
+  checkLoginStatus();
+  // Load "remember me" data if exists
+  const rememberedEmail = localStorage.getItem("rememberedEmail");
+  if (rememberedEmail) {
+    const loginEmail = document.getElementById("loginEmail");
+    if (loginEmail) loginEmail.value = rememberedEmail;
+    document.getElementById("rememberMe").checked = true;
+  }
+  // initialize map
+  initMap();
+  // show home by default
+  showHome();
+};
+
+// Login/Signup Logic
+function signupUser() {
+  const emailEl = document.getElementById("signupEmail");
+  const passwordEl = document.getElementById("signupPassword");
+  const confirmEl = document.getElementById("confirmPassword");
+  const email = emailEl.value.trim();
+  const password = passwordEl.value.trim();
+  const confirmPassword = confirmEl.value.trim();
+
+  document.getElementById("signupEmailError").textContent = "";
+  document.getElementById("signupPasswordError").textContent = "";
+  document.getElementById("confirmPasswordError").textContent = "";
+
+  let isValid = true;
+
+  if (!email) {
+    document.getElementById("signupEmailError").textContent = "Email is required.";
+    isValid = false;
+  } else if (!validateEmail(email)) {
+    document.getElementById("signupEmailError").textContent = "Enter a valid email.";
+    isValid = false;
+  }
+
+  if (!password) {
+    document.getElementById("signupPasswordError").textContent = "Password is required.";
+    isValid = false;
+  } else if (password.length < 6) {
+    document.getElementById("signupPasswordError").textContent = "Password must be at least 6 characters.";
+    isValid = false;
+  }
+
+  if (!confirmPassword) {
+    document.getElementById("confirmPasswordError").textContent = "Please confirm password.";
+    isValid = false;
+  } else if (password !== confirmPassword) {
+    document.getElementById("confirmPasswordError").textContent = "Passwords do not match.";
+    isValid = false;
+  }
+
+  if (!isValid) return;
+
+  const users = getUsers();
+  if (users[email]) {
+    document.getElementById("signupEmailError").textContent = "An account with this email already exists.";
+    return;
+  }
+
+  users[email] = { password };
+  setUsers(users);
+
+  alert("Signup successful. Please login.");
+  showLogin();
+}
+
+function loginUser() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+
+  document.getElementById("loginEmailError").textContent = "";
+  document.getElementById("loginPasswordError").textContent = "";
+
+  if (!email) {
+    document.getElementById("loginEmailError").textContent = "Email required.";
+    return;
+  }
+  if (!password) {
+    document.getElementById("loginPasswordError").textContent = "Password required.";
+    return;
+  }
+
+  const users = getUsers();
+  if (!users[email] || users[email].password !== password) {
+    document.getElementById("loginPasswordError").textContent = "Invalid email or password.";
+    return;
+  }
+
+  localStorage.setItem("currentUser", email);
+  if (document.getElementById("rememberMe").checked) {
+    localStorage.setItem("rememberedEmail", email);
+  } else {
+    localStorage.removeItem("rememberedEmail");
+  }
+
+  checkLoginStatus();
+  showParking();
+}
+
+function logoutUser() {
+  localStorage.removeItem("currentUser");
+  checkLoginStatus();
+  showHome();
+}
+
+function checkLoginStatus() {
+  const current = localStorage.getItem("currentUser");
+  if (current) {
+    authLink.textContent = current;
+    authLink.onclick = function(){ showDashboard(); };
+    logoutLink.style.display = "inline";
+    // hide search notice if present
+    if (searchNoticeEl) searchNoticeEl.style.display = "none";
+  } else {
+    authLink.textContent = "Login";
+    authLink.onclick = function(){ showLogin(); };
+    logoutLink.style.display = "none";
+  }
+}
+
+// Helper function to validate email
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email.toLowerCase());
+}
+
+// Auto-suggest Kerala places
+const keralaPlaces = [
+  "Kochi","Thiruvananthapuram","Kozhikode","Thrissur","Kollam",
+  "Alappuzha","Kottayam","Kannur","Malappuram","Idukki","Palakkad","Pathanamthitta","Wayanad","Neyyattinkara","Ernakulam"
+];
+const searchInput = document.getElementById("searchInput");
+const suggestionsDiv = document.getElementById("suggestions");
+
+if (searchInput) {
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) { suggestionsDiv.style.display = "none"; suggestionsDiv.innerHTML = ""; return; }
+    const matches = keralaPlaces.filter(p => p.toLowerCase().includes(q)).slice(0,6);
+    suggestionsDiv.innerHTML = "";
+    if (matches.length === 0) { suggestionsDiv.style.display = "none"; return; }
+    matches.forEach(m => {
+      const d = document.createElement("div");
+      d.textContent = m;
+      d.onclick = () => { searchInput.value = m; suggestionsDiv.style.display = "none"; };
+      suggestionsDiv.appendChild(d);
+    });
+    suggestionsDiv.style.display = "block";
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+      suggestionsDiv.style.display = "none";
+    }
+  });
+}
+
+// Parking Data (slots increased to 50)
+const parkingData = [
+  {id:1,name:"Central Mall Parking",location:"Kochi",slots:50,price:40,type:"paid",lat:9.9667,lng:76.2855},
+  {id:2,name:"Seaside Free Lot",location:"Alappuzha",slots:50,price:0,type:"free",lat:9.4981,lng:76.3388},
+  {id:3,name:"City Center Multi-storey",location:"Thiruvananthapuram",slots:50,price:60,type:"paid",lat:8.5241,lng:76.9366},
+  {id:4,name:"Temple Road Parking",location:"Thrissur",slots:50,price:20,type:"paid",lat:10.5276,lng:76.2144},
+  {id:5,name:"Lakeside Park",location:"Kottayam",slots:50,price:0,type:"free",lat:9.5916,lng:76.5220},
+  {id:6,name:"Hillview Parking",location:"Idukki",slots:50,price:30,type:"paid",lat:9.8781,lng:77.1520},
+  {id:7,name:"North Gate Lot",location:"Kozhikode",slots:50,price:25,type:"paid",lat:11.2588,lng:75.7804},
+  {id:8,name:"Riverfront Parking",location:"Kollam",slots:50,price:0,type:"free",lat:8.8932,lng:76.6141},
+  {id:9,name:"Market Square Park",location:"Kannur",slots:50,price:20,type:"paid",lat:11.8745,lng:75.3704},
+  {id:10,name:"SBI Colony Parking",location:"Palakkad",slots:50,price:0,type:"free",lat:10.7867,lng:76.6548},
+  {id:11,name:"Mall Avenue",location:"Thrissur",slots:50,price:50,type:"paid",lat:10.5276,lng:76.2144},
+  {id:12,name:"Heights Car Park",location:"Kochi",slots:50,price:45,type:"paid",lat:9.9312,lng:76.2673},
+  {id:13,name:"Old Bus Stand Lot",location:"Alappuzha",slots:50,price:10,type:"paid",lat:9.4981,lng:76.3388},
+  {id:14,name:"Green Park",location:"Kottayam",slots:50,price:0,type:"free",lat:9.5916,lng:76.5220},
+  {id:15,name:"Shopping Complex Park",location:"Malappuram",slots:50,price:35,type:"paid",lat:11.0732,lng:76.0748},
+  {id:16,name:"College Road Parking",location:"Kottayam",slots:50,price:15,type:"paid",lat:9.5916,lng:76.5220},
+  {id:17,name:"Beachside Slots",location:"Kochi",slots:50,price:0,type:"free",lat:9.9667,lng:76.2855},
+  {id:18,name:"Forest Edge Lot",location:"Wayanad",slots:50,price:30,type:"paid",lat:11.6850,lng:76.1333},
+  {id:19,name:"Town Plaza Parking",location:"Ernakulam",slots:50,price:40,type:"paid",lat:9.9816,lng:76.2999},
+  {id:20,name:"Station Road Lot",location:"Thiruvananthapuram",slots:50,price:20,type:"paid",lat:8.5241,lng:76.9366}
+];
+
+function searchParking() {
+  const q = document.getElementById("searchInput").value.trim();
+
+  // require login to perform search
+  const current = localStorage.getItem("currentUser");
+  if (!current) {
+    if (searchNoticeEl) {
+      searchNoticeEl.style.display = "block";
+      // hide after a short delay so it doesn't persist forever
+      setTimeout(()=>{ if (!localStorage.getItem("currentUser")) searchNoticeEl.style.display = "block"; }, 0);
+    } else {
+      alert("Please login to search for parking slots.");
+    }
+    // focus login to prompt user
+    showLogin();
+    return;
+  }
+
+  // hide notice if logged in
+  if (searchNoticeEl) searchNoticeEl.style.display = "none";
+
+  renderParking(q);
+}
+
+function renderParking(loc = "") {
+  const listEl = document.getElementById("parkingList");
+  listEl.innerHTML = "";
+  let data = parkingData.slice();
+
+  if (loc) {
+    const lc = loc.toLowerCase();
+    data = data.filter(p => p.location.toLowerCase().includes(lc) || p.name.toLowerCase().includes(lc));
+  }
+
+  // apply ui filters if set
+  data = applyAdditionalFilters(data);
+
+  if (data.length === 0) {
+    listEl.innerHTML = "<p>No parking spots found.</p>";
+    return;
+  }
+
+  data.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "parking-card";
+    const badgeClass = p.type === "free" ? "badge free" : "badge paid";
+    card.innerHTML = `
+      <h3>${p.name}</h3>
+      <div class="${badgeClass}">${p.type.toUpperCase()}</div>
+      <p>${p.location} - Slots: ${p.slots}</p>
+      <p class="price">₹${p.price} / hour</p>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button id="bookBtn_${p.id}" ${p.slots === 0 ? "disabled" : ""}>Book</button>
+        <button onclick="focusOnMap(${p.lat}, ${p.lng})">View on map</button>
+      </div>
+    `;
+    listEl.appendChild(card);
+    document.getElementById(`bookBtn_${p.id}`).onclick = () => bookSlot(p.id);
+  });
+}
+
+function applyAdditionalFilters(data) {
+  const locFilter = document.getElementById("filterLocation").value.trim().toLowerCase();
+  const typeFilter = document.getElementById("filterType").value;
+  if (locFilter) {
+    data = data.filter(p => p.location.toLowerCase().includes(locFilter) || p.name.toLowerCase().includes(locFilter));
+  }
+  if (typeFilter) {
+    data = data.filter(p => p.type === typeFilter);
+  }
+  return data;
+}
+
+function applyFilters() {
+  renderParking(document.getElementById("searchInput").value.trim());
+}
+
+// Booking + Payment flow
+let pendingPaymentSpot = null;
+
+function bookSlot(id) {
+  const current = localStorage.getItem("currentUser");
+  if (!current) {
+    alert("Please login to book a slot.");
+    showLogin();
+    return;
+  }
+  const spot = parkingData.find(p => p.id === id);
+  if (!spot || spot.slots === 0) {
+    alert("No slots available.");
+    renderParking();
+    return;
+  }
+
+  if (spot.type === "paid") {
+    // open payment modal
+    pendingPaymentSpot = spot;
+    openPaymentModal(spot);
+  } else {
+    completeBooking(spot);
+  }
+}
+
+function completeBooking(spot) {
+  // decrement slot count and save booking
+  spot.slots = Math.max(0, spot.slots - 1);
+
+  const current = localStorage.getItem("currentUser");
+  const key = `bookings_${current}`;
+  const bookings = JSON.parse(localStorage.getItem(key) || "[]");
+  const booking = {
+    id: Date.now(),
+    spotId: spot.id,
+    name: spot.name,
+    location: spot.location,
+    price: spot.price,
+    paid: spot.type === "paid",
+    bookedAt: new Date().toLocaleString()
+  };
+  bookings.unshift(booking);
+  localStorage.setItem(key, JSON.stringify(bookings));
+
+  alert("Booking confirmed for " + spot.name);
+  renderParking(document.getElementById("searchInput").value.trim());
+  loadBookingHistory();
+  updateMapMarkers();
+}
+
+// Payment modal functions
+function openPaymentModal(spot) {
+  const modal = document.getElementById("paymentModal");
+  const details = document.getElementById("paymentDetails");
+  details.innerHTML = `<div>Pay ₹${spot.price} for <strong>${spot.name}</strong> (${spot.location})</div>`;
+  document.getElementById("upiVpa").value = "";
+  document.getElementById("upiError").textContent = "";
+  // set default method active
+  document.querySelectorAll(".method").forEach(m=>m.classList.remove("active"));
+  document.querySelector('.method[data-method="upi"]').classList.add("active");
+  document.getElementById("paySpinner").style.display = "none";
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden","false");
+}
+
+function closePaymentModal() {
+  const modal = document.getElementById("paymentModal");
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden","true");
+  pendingPaymentSpot = null;
+}
+
+document.getElementById("methods").addEventListener("click", function(e){
+  const m = e.target.closest(".method");
+  if (!m) return;
+  document.querySelectorAll(".method").forEach(x=>x.classList.remove("active"));
+  m.classList.add("active");
+});
+
+// Simple UPI validation
+function validateUpi(vpa) {
+  if (!vpa) return false;
+  // very basic pattern: text@text
+  return /^[\w.\-]{2,}@[a-zA-Z]{3,}$/.test(vpa);
+}
+
+function processPayment() {
+  const active = document.querySelector(".method.active").dataset.method;
+  const upiVpa = document.getElementById("upiVpa").value.trim();
+  document.getElementById("upiError").textContent = "";
+  if (active === "upi") {
+    if (!validateUpi(upiVpa)) {
+      document.getElementById("upiError").textContent = "Enter a valid UPI VPA (example@bank).";
+      return;
+    }
+  }
+  // simulate payment
+  document.getElementById("paySpinner").style.display = "inline-block";
+  document.getElementById("payNowBtn").disabled = true;
+
+  setTimeout(()=> {
+    document.getElementById("paySpinner").style.display = "none";
+    document.getElementById("payNowBtn").disabled = false;
+    // simulate success
+    alert("Payment successful.");
+    if (pendingPaymentSpot) {
+      completeBooking(pendingPaymentSpot);
+      closePaymentModal();
+    } else {
+      closePaymentModal();
+    }
+  }, 1400);
+}
+
+// Map initialization and markers
+function initMap() {
+  // Center on Kerala roughly
+  map = L.map('map', {minZoom:6, maxZoom:18}).setView([10.0,76.5], 7);
+
+  // constrain view to Kerala rough bbox
+  const keralaBounds = [[7.5,74.5],[12.75,77.9]];
+  map.setMaxBounds(keralaBounds);
+  // light rectangle to highlight Kerala
+  L.rectangle(keralaBounds, {color:'#007bff', weight:1, fillOpacity:0.02}).addTo(map);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  updateMapMarkers();
+}
+
+function updateMapMarkers() {
+  // remove old markers
+  parkingMarkers.forEach(m => map.removeLayer(m));
+  parkingMarkers = [];
+
+  parkingData.forEach(p => {
+    if (p.lat == null || p.lng == null) return;
+    const marker = L.marker([p.lat, p.lng]).addTo(map);
+    const popupHtml = `<strong>${p.name}</strong><div>${p.location}</div><div>Slots: ${p.slots}</div><div>₹${p.price} / hour</div>
+      <div style="margin-top:6px;"><button onclick="bookSlot(${p.id})" ${p.slots===0? 'disabled' : ''}>Book</button>
+      <button onclick="focusOnMap(${p.lat}, ${p.lng})" style="margin-left:6px;">Zoom</button></div>`;
+    marker.bindPopup(popupHtml);
+    parkingMarkers.push(marker);
+  });
+}
+
+function focusOnMap(lat, lng) {
+  showMap();
+  map.setView([lat, lng], 15);
+}
+
+// Booking history
+function loadBookingHistory() {
+  const current = localStorage.getItem("currentUser");
+  const historyEl = document.getElementById("bookingHistory");
+  historyEl.innerHTML = "";
+  if (!current) { historyEl.innerHTML = "<p>Please login to see bookings.</p>"; return; }
+  const bookings = JSON.parse(localStorage.getItem(`bookings_${current}`) || "[]");
+  if (bookings.length === 0) {
+    historyEl.innerHTML = "<p>No bookings yet.</p>";
+    return;
+  }
+  bookings.forEach(b => {
+    const item = document.createElement("div");
+    item.className = "booking-item";
+    item.innerHTML = `<strong>${b.name}</strong><div>${b.location}</div><div>Price: ₹${b.price} ${b.paid ? '(Paid)' : '(Free)'}</div><div>When: ${b.bookedAt}</div>`;
+    historyEl.appendChild(item);
+  });
+}
+</script>
+</body>
+</html>
+<!-- ...existing code... -->
